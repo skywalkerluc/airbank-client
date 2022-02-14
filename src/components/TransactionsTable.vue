@@ -5,11 +5,13 @@
         v-model="date"
         :defaultYear="2020"
         placeholder="Pick a date range"
-        clearable
         :maxDate="maxDate"
         :minDate="minDate"
         range
       />
+      <button @click="clear" class="regular-btn">
+        Clear
+      </button>
       <button @click="filter" class="regular-btn">
         Filter
       </button>
@@ -24,8 +26,8 @@
 
       <table v-show="!showLoader && !isEmpty">
         <tr class="transactions-header">
-          <th>Account</th>
           <th>Date</th>
+          <th>Account</th>
           <th>Currency</th>
           <th>Amount</th>
           <th>Status</th>
@@ -34,9 +36,10 @@
           v-for="transaction in transactions"
           :key="transaction.internalId"
           class="transaction-line"
+          @click="openDetails(transaction)"
         >
-          <td>{{transaction.account}}</td>
           <td>{{transaction.transactionDate}}</td>
+          <td>{{transaction.account}}</td>
           <td>{{transaction.currency}}</td>
           <td>{{transaction.amount}}</td>
           <td>{{transaction.status}}</td>
@@ -47,6 +50,7 @@
     <div class="details" v-else>
       <div class="details-box">
         <div class="details-header">
+          <span @click="dismissDetails" class="back-icon">X</span>
           <h3>Details</h3>
         </div>
         <div class="details-container">
@@ -130,10 +134,10 @@ export default {
       return new Date(Math.min.apply(null, this.mappedDates));
     },
     startDate() {
-      return this.getMonths()[this.date.rangeFrom]
+      return { month: this.getMonths()[this.date.rangeFromMonth], year: this.date.year }
     },
     endDate() {
-      return this.getMonths()[this.date.rangeTo]
+      return { month: this.getMonths()[this.date.rangeToMonth], year: this.date.year }
     },
     isEmpty() {
       return this.transactions === null || this.transactions.length === 0
@@ -162,18 +166,17 @@ export default {
     dismissDetails() {
       this.showDetails = false;
     },
+    async clear() {
+      this.loadTransactions();
+      this.date = {};
+    },
     async filter() {
       this.showLoader = true;
       try {
-        console.log(this.date.year, 'date');
-        console.log(this.startDate, 'str');
-
-        console.log(this.date.year, 'date2');
-        console.log(this.endDate, 'end');
-
+        // when trying to get a range from a year to another, it's not working (happening for this component, already submitting an issue to it).
         const transactions = await axios.post("http://localhost:8090/v1", {
           query:
-            `{transactionsAtRange(start: "${this.date.year}-${this.startDate}", end: "${this.date.year}-${this.endDate}" ) {internalId, id, createdAt, updatedAt, transactionDate, account, description, category, reference, currency, amount, status}}`,
+            `{transactionsAtRange(start: "${this.startDate.year}-${this.startDate.month}", end: "${this.endDate.year}-${this.endDate.month}" ) {internalId, id, createdAt, updatedAt, transactionDate, account, description, category, reference, currency, amount, status}}`,
         });
         this.transactions = transactions.data.data.transactionsAtRange;
         this.showLoader = false;
@@ -231,11 +234,11 @@ export default {
   th {
     text-align: center;
     padding: 20px 5px;
+    color: white;
   }
 
   td {
     text-align: center;
     padding: 10px 6px 10px 6px;
   }
-
 </style>
