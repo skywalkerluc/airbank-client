@@ -167,10 +167,17 @@ export default {
       this.showDetails = false;
     },
     async clear() {
+      if(!this.date.rangeFromMonth) {
+        return;
+      }
+
       this.loadTransactions();
       this.date = {};
     },
     async filter() {
+      if(!this.date.rangeFromMonth) {
+        return;
+      }
       this.showLoader = true;
       try {
         // when trying to get a range from a year to another, it's not working (happening for this component, already submitting an issue to it).
@@ -209,6 +216,18 @@ export default {
   .content {
     width: 100%;
     position: relative;
+  }
+
+  .month-picker-container>div {
+    width: initial;
+    padding: 1%;
+  }
+
+  .regular-btn {
+    margin: 2% 1% 2% 1%;
+    cursor: pointer;
+    width: 80px;
+    border: 1px solid #18515E;
   }
 
   .transactions-table {
