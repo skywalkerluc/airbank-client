@@ -2,6 +2,7 @@
   "name": "airbank-consumer",
   "version": "0.1.0",
   "private": true,
+  "description": "client for consuming api created for airbank challenge with Vue",
   "scripts": {
     "start": "vue-cli-service serve",
     "build": "vue-cli-service build",
@@ -22,6 +23,11 @@
     "eslint-plugin-vue": "^6.2.2",
     "vue-template-compiler": "^2.6.11"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skywalkerluc/airbank-client.git"
+  },
+  "author": "Lucas Ferreira",
   "eslintConfig": {
     "root": true,
     "env": {
