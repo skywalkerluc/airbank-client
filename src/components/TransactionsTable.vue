@@ -1,83 +1,99 @@
 <template>
   <div class="container">
-    <div class="month-picker-container">
+    <div v-show="!showDetails" class="month-picker-container">
+      <MonthPickerInput
+        v-model="date"
+        :defaultYear="2020"
+        placeholder="Pick a date range"
+        clearable
+        :maxDate="maxDate"
+        :minDate="minDate"
+        range
+      />
+      <button @click="filter" class="regular-btn">
+        Filter
+      </button>
     </div>
-    <div class="loader">
-      loading...
-    </div>
-    <div class="empty-collection">
-      No transaction records found.
-    </div>
+    <div v-if="!showDetails" class="transactions-table">
+      <div v-show="showLoader" class="loader">
+        loading...
+      </div>
+      <div v-show="!showLoader && isEmpty" class="empty-collection">
+        No transaction records found.
+      </div>
 
-    <div class="table-container">
-      <table>
+      <table v-show="!showLoader && !isEmpty">
         <tr class="transactions-header">
           <th>Account</th>
           <th>Date</th>
-          <th>Category</th>
           <th>Currency</th>
           <th>Amount</th>
           <th>Status</th>
         </tr>
-        <tr>
-          <td>Fake account</td>
-          <td>Fake date</td>
-          <td>Fake category</td>
-          <td>Fake currency</td>
-          <td>Fake amount</td>
-          <td>Fake status</td>
+        <tr
+          v-for="transaction in transactions"
+          :key="transaction.internalId"
+          class="transaction-line"
+        >
+          <td>{{transaction.account}}</td>
+          <td>{{transaction.transactionDate}}</td>
+          <td>{{transaction.currency}}</td>
+          <td>{{transaction.amount}}</td>
+          <td>{{transaction.status}}</td>
         </tr>
       </table>
     </div>
 
-  <div class="details">
-    <div class="details-box">
-      <div class="details-header">
-      </div>
-      <div class="details-container">
-        <div class="transaction-details">
-          <h4>ID: </h4>
-          <span>Fake ID</span>
+    <div class="details" v-else>
+      <div class="details-box">
+        <div class="details-header">
+          <h3>Details</h3>
         </div>
-        <div class="transaction-details">
-          <h4>Category: </h4>
-          <span>Fake Account</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Account: </h4>
-          <span>Fake Account</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Currency: </h4>
-          <span>Fake Currency</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Amount: </h4>
-          <span>Fake Amount</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Created at: </h4>
-          <span>Fake date</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Description: </h4>
-          <span>Fake Description</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Reference: </h4>
-          <span>Fake Reference</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Status: </h4>
-          <span>Fake Status</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Date: </h4>
-          <span>Fake transaction date</span>
-        </div>
-        <div class="transaction-details">
-          <h4>Updated at: </h4>
-          <span>Fake Updated at</span>
+        <div class="details-container">
+          <div class="transaction-details">
+            <h4>ID: </h4>
+            <span>{{transactionDetails.id}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Category: </h4>
+            <span>{{transactionDetails.category}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Account: </h4>
+            <span>{{transactionDetails.account}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Currency: </h4>
+            <span>{{transactionDetails.currency}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Amount: </h4>
+            <span>{{transactionDetails.amount}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Created at: </h4>
+            <span>{{transactionDetails.createdAt}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Description: </h4>
+            <span>{{transactionDetails.description}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Reference: </h4>
+            <span>{{transactionDetails.reference}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Status: </h4>
+            <span>{{transactionDetails.status}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Date: </h4>
+            <span>{{transactionDetails.transactionDate}}</span>
+          </div>
+          <div class="transaction-details">
+            <h4>Updated at: </h4>
+            <span>{{transactionDetails.updatedAt}}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -86,16 +102,102 @@
 
 <script>
 import { MonthPickerInput } from 'vue-month-picker';
+import axios from "axios";
 
 export default {
   name: 'TransactionsTable',
+  components: {
+    MonthPickerInput
+  },
   data() {
     return {
       transactions: [],
       transactionDetails: {},
+      showDetails: false,
+      showLoader: false,
+      date: {},
+      mappedDates: []
     }
   },
+  async created() {
+    await this.loadTransactions();
+  },
+  computed: {
+    maxDate() {
+      return new Date(Math.max.apply(null, this.mappedDates));
+    },
+    minDate() {
+      return new Date(Math.min.apply(null, this.mappedDates));
+    },
+    startDate() {
+      return this.getMonths()[this.date.rangeFrom]
+    },
+    endDate() {
+      return this.getMonths()[this.date.rangeTo]
+    },
+    isEmpty() {
+      return this.transactions === null || this.transactions.length === 0
+    }
+  },
+  methods: {
+    getMonths() {
+      return {
+        January: "01",
+        February: "02",
+        March: "03",
+        April: "04",
+        May: "05",
+        June: "06",
+        July: "07",
+        August: "08",
+        September: "09",
+        November: "11",
+        December: "12",
+      }
+    },
+    openDetails(transaction) {
+      this.transactionDetails = transaction;
+      this.showDetails = true;
+    },
+    dismissDetails() {
+      this.showDetails = false;
+    },
+    async filter() {
+      this.showLoader = true;
+      try {
+        console.log(this.date.year, 'date');
+        console.log(this.startDate, 'str');
 
+        console.log(this.date.year, 'date2');
+        console.log(this.endDate, 'end');
+
+        const transactions = await axios.post("http://localhost:8090/v1", {
+          query:
+            `{transactionsAtRange(start: "${this.date.year}-${this.startDate}", end: "${this.date.year}-${this.endDate}" ) {internalId, id, createdAt, updatedAt, transactionDate, account, description, category, reference, currency, amount, status}}`,
+        });
+        this.transactions = transactions.data.data.transactionsAtRange;
+        this.showLoader = false;
+      } catch (err) {
+        console.log(err);
+      }
+    },
+    async loadTransactions() {
+      this.showLoader = true;
+      try {
+        const transactions = await axios.post("http://localhost:8090/v1", {
+          query:
+            "{transactions {internalId, id, createdAt, updatedAt, transactionDate, account, description, category, reference, currency, amount, status}}",
+        });
+        this.transactions = transactions.data.data.transactions;
+        this.mappedDates = this.transactions.map(t => new Date(t.transactionDate));
+        this.showLoader = false;
+      } catch (err) {
+        this.showLoader = false;
+        this.isEmpty = true;
+        console.log(err);
+      }
+    }
+  }
 }
 
 </script>
@@ -106,5 +208,34 @@ export default {
     position: relative;
   }
 
+  .transactions-table {
+    max-height: 600px;
+    overflow-y: scroll;
+    border: 2px solid #18515E;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .transactions-header {
+    background-color: gray;
+  }
+
+  .transaction:hover {
+    cursor: pointer;
+    background-color: #18515E;
+  }
+
+  th {
+    text-align: center;
+    padding: 20px 5px;
+  }
+
+  td {
+    text-align: center;
+    padding: 10px 6px 10px 6px;
+  }
 
 </style>
